@@ -4,6 +4,7 @@
 #include <math.h>
 #include <assert.h>
 
+#include <gmp.h>
 #include <mpi.h>
 
 int main(int argc, char** argv)
