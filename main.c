@@ -22,7 +22,7 @@ int main(int argc, char** argv)
     mpz_t nextPrimeNumber;
     mpz_init_set_str (N, argv[1], 10);
     mpz_init(&nextPrimeNumber);
-    mpz_init_set_ui(currentPrime, 1);
+    mpz_init_set_ui(currentPrime, 2);
     mpz_nextprime(nextPrimeNumber, N);
     
     printf("N = %s , nextPrime: %d \n", mpz_get_str(NULL, 10, N), mpz_get_ui(nextPrimeNumber));
@@ -35,9 +35,17 @@ int main(int argc, char** argv)
   MPI_Status status;
     
     while (!doneFlag) {
-        for (i=0 ; i <= my_rank + iterations?p:0; i++) {
-            mpz_nextprime(currentPrime, currentPrime);
+        if (!iterations) {
+            iterations++;
+            for (i=0 ; i < my_rank ; i++) {
+                mpz_nextprime(currentPrime, currentPrime);
+            }
+        } else {
+            for (i=0 ; i < p ; i++) {
+                mpz_nextprime(currentPrime, currentPrime);
+            }
         }
+        
         printf("currentPrime for %d = %d \n",my_rank,  mpz_get_ui(currentPrime));
         printf("product \% mpz_get_ui(currentPrime) = %d \n", product % mpz_get_ui(currentPrime));
         if (product % mpz_get_ui(currentPrime) == 0) {
@@ -45,14 +53,14 @@ int main(int argc, char** argv)
             secondFactor = product / mpz_get_ui(currentPrime);
             printf("done by process %d, factors are %d and %d \n", my_rank, mpz_get_ui(currentPrime), secondFactor);
         }
-            MPI_Allreduce(
-                      &doneFlag,
-                      &doneFlag,
+        MPI_Allreduce(
+                    &doneFlag,
+                    &doneFlag,
                     1,
-                      MPI_INT,
-                      MPI_MAX,
-                      MPI_COMM_WORLD);
-        iterations++;
+                    MPI_INT,
+                    MPI_MAX,
+                    MPI_COMM_WORLD);
+        
     }
 
 
