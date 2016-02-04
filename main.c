@@ -46,16 +46,14 @@ int main(int argc, char** argv)
 
     MPI_Irecv(&secondFactor, 1, MPI_UNSIGNED_LONG, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &finalValue);
     double start = MPI_Wtime(), diff;
-    while (!secondFactor && mpz_get_ui(currentPrime) <= squareRoot) {
-
-
-
+    while (!secondFactor) {
         MPI_Test (
              &finalValue,
              &bcastStatus,
              &status);
              if(bcastStatus) {
                MPI_Wait(&finalValue, &status);
+               break;
              }
         if (!iterations) {
             iterations++;
@@ -71,6 +69,7 @@ int main(int argc, char** argv)
         for (mpz_set_ui(testFactor , 2) ; mpz_get_ui(testFactor) <= mpz_get_ui(currentPrime); mpz_nextprime(testFactor, testFactor)) {
 
           if (mpz_get_ui(currentPrime) * mpz_get_ui(testFactor) == product){
+            fflush(stdout);
               secondFactor = product / mpz_get_ui(currentPrime);
               printf("done by process %d, factors are %d and %d \n", my_rank, mpz_get_ui(currentPrime), secondFactor);
               fflush(stdout);
@@ -81,8 +80,8 @@ int main(int argc, char** argv)
               }
           }
         }
-
     }
+
     diff = MPI_Wtime() - start;
 
     char fileName[200], fileContents[200];
