@@ -3,7 +3,6 @@
 #include <string.h>
 #include <math.h>
 #include <assert.h>
-#include <time.h>
 
 #include <gmp.h>
 #include <mpi.h>
@@ -18,35 +17,46 @@ int main(int argc, char** argv)
     unsigned long int product = atoi(argv[1]);
     int secondFactor = 0;
     int iterations = 0;
+    int j;
     int bcastStatus;
-    
-    
+
     mpz_t N;
     mpz_t nextPrimeNumber;
+    mpz_t testFactor;
     mpz_init_set_str (N, argv[1], 10);
     mpz_init(&nextPrimeNumber);
+    mpz_init(&testFactor);
     mpz_init_set_ui(currentPrime, 2);
     mpz_nextprime(nextPrimeNumber, N);
-    
+
+    unsigned long int squareRoot;
+    squareRoot =  sqrt(mpz_get_ui(N));
+
     MPI_Request finalValue;
-    
+    MPI_File out;
+
     //printf("N = %s , nextPrime: %d \n", mpz_get_str(NULL, 10, N), mpz_get_ui(nextPrimeNumber));
-    
+
   MPI_Init(&argc, &argv);
   MPI_Comm_size(MPI_COMM_WORLD, &p);
   MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
 
 
   MPI_Status status;
-    
-    clock_t start = clock(), diff;
-    if (my_rank == 0) {
-        MPI_Irecv(&secondFactor, 1, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-    } else {
-        bcastStatus = MPI_Ibcast(&secondFactor, 1, MPI_INT, 0, MPI_COMM_WORLD, &finalValue);
-    }
-    
-    while (!secondFactor) {
+
+    MPI_Irecv(&secondFactor, 1, MPI_UNSIGNED_LONG, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &finalValue);
+    double start = MPI_Wtime(), diff;
+    while (!secondFactor && mpz_get_ui(currentPrime) <= squareRoot) {
+
+
+
+        MPI_Test (
+             &finalValue,
+             &bcastStatus,
+             &status);
+             if(bcastStatus) {
+               MPI_Wait(&finalValue, &status);
+             }
         if (!iterations) {
             iterations++;
             for (i=0 ; i < my_rank ; i++) {
@@ -57,39 +67,33 @@ int main(int argc, char** argv)
                 mpz_nextprime(currentPrime, currentPrime);
             }
         }
-        
-        //printf("currentPrime for %d = %d \n",my_rank,  mpz_get_ui(currentPrime));
-        //printf("product \% mpz_get_ui(currentPrime) = %d \n", product % mpz_get_ui(currentPrime));
-        if (product % mpz_get_ui(currentPrime) == 0) {
-            doneFlag = 1;
-            secondFactor = product / mpz_get_ui(currentPrime);
-            printf("done by process %d, factors are %d and %d \n", my_rank, mpz_get_ui(currentPrime), secondFactor);
-            MPI_Send(&secondFactor, 1, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD);
 
+        for (mpz_set_ui(testFactor , 2) ; mpz_get_ui(testFactor) <= mpz_get_ui(currentPrime); mpz_nextprime(testFactor, testFactor)) {
+
+          if (mpz_get_ui(currentPrime) * mpz_get_ui(testFactor) == product){
+              secondFactor = product / mpz_get_ui(currentPrime);
+              printf("done by process %d, factors are %d and %d \n", my_rank, mpz_get_ui(currentPrime), secondFactor);
+              fflush(stdout);
+              for (dest = 0 ; dest < p ; dest++) {
+                if (dest != my_rank) {
+                  MPI_Send(&secondFactor, 1, MPI_UNSIGNED_LONG, dest, 0, MPI_COMM_WORLD);
+                }
+              }
+          }
         }
-//        MPI_Allreduce(
-//                    &secondFactor,
-//                    &secondFactor,
-//                    1,
-//                    MPI_INT,
-//                    MPI_MAX,
-//                    MPI_COMM_WORLD);
-    }
-    diff = clock() - start;
-    if (my_rank == 0) {
-        bcastStatus =MPI_Ibcast(&secondFactor, 1, MPI_INT, 0, MPI_COMM_WORLD, &finalValue);
-    }
-    
-    int msec = diff * 1000 / CLOCKS_PER_SEC;
-    printf("Time taken %d seconds %d milliseconds by process %d \n", msec/1000, msec%1000, my_rank);
-    
-    if (my_rank == 0) {
-        MPI_Ibcast(&secondFactor, 1, MPI_INT, 0, MPI_COMM_WORLD, &finalValue);
-    } else {
-    
-    }
 
+    }
+    diff = MPI_Wtime() - start;
 
+    char fileName[200], fileContents[200];
+    sprintf(fileName, "time_%d", product);
+    sprintf(fileContents, "%d\t%f\n", my_rank, diff);
+
+    printf("Time taken %f by %d \n", diff, my_rank);
+    MPI_File_open( MPI_COMM_WORLD, fileName, MPI_MODE_WRONLY | MPI_MODE_CREATE, MPI_INFO_NULL, &out );
+    MPI_File_seek(out, my_rank*strlen ( &fileContents ) , MPI_SEEK_SET);
+
+    MPI_File_write_all(out , &fileContents, strlen ( &fileContents ), MPI_CHAR, &status );
 
   MPI_Finalize();
   return(0);
