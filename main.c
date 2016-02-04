@@ -19,6 +19,7 @@ int main(int argc, char** argv)
     int iterations = 0;
     int j;
     int bcastStatus;
+    int equals;
 
     mpz_t N;
     mpz_t nextPrimeNumber;
@@ -28,6 +29,8 @@ int main(int argc, char** argv)
     mpz_init(&testFactor);
     mpz_init_set_ui(currentPrime, 2);
     mpz_nextprime(nextPrimeNumber, N);
+    mpz_t testProduct;
+    mpz_init(&testProduct);
 
     unsigned long int squareRoot;
     squareRoot =  sqrt(mpz_get_ui(N));
@@ -67,8 +70,9 @@ int main(int argc, char** argv)
         }
 
         for (mpz_set_ui(testFactor , 2) ; mpz_get_ui(testFactor) <= mpz_get_ui(currentPrime); mpz_nextprime(testFactor, testFactor)) {
-
-          if (mpz_get_ui(currentPrime) * mpz_get_ui(testFactor) == product){
+            mpz_mul_ui(&testProduct, &currentPrime, mpz_get_ui(testFactor));
+            equals = mpz_cmp_ui(testProduct, product);
+          if (equals == 0){
             fflush(stdout);
               secondFactor = product / mpz_get_ui(currentPrime);
               printf("done by process %d, factors are %d and %d \n", my_rank, mpz_get_ui(currentPrime), secondFactor);
