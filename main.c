@@ -95,9 +95,10 @@ int main(int argc, char** argv)
     printf("Time taken %f by %d \n", diff, my_rank);
     MPI_File_open( MPI_COMM_WORLD, fileName, MPI_MODE_WRONLY | MPI_MODE_CREATE, MPI_INFO_NULL, &out );
     MPI_File_seek(out, my_rank*strlen ( &fileContents ) , MPI_SEEK_SET);
-
     MPI_File_write_all(out , &fileContents, strlen ( &fileContents ), MPI_CHAR, &status );
-
-  MPI_Finalize();
+    MPI_File_close(&out);
+    
+    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Finalize();
   return(0);
 }
