@@ -14,7 +14,9 @@ int main(int argc, char** argv)
   int i, dest, source;
     int doneFlag = 0;
     mpz_t currentPrime;
-    unsigned long int product = atoi(argv[1]);
+    unsigned long int product;
+    sscanf(argv[1], "%lu", &product);
+    printf("Argument: %llu\n", product);
     int secondFactor = 0;
     int iterations = 0;
     int j;
@@ -89,7 +91,7 @@ int main(int argc, char** argv)
     diff = MPI_Wtime() - start;
 
     char fileName[200], fileContents[200];
-    sprintf(fileName, "time_%d", product);
+    sprintf(fileName, "time_%llu", product);
     sprintf(fileContents, "%d\t%f\n", my_rank, diff);
 
     printf("Time taken %f by %d \n", diff, my_rank);
