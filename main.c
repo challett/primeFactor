@@ -15,7 +15,6 @@ int main(int argc, char** argv)
   unsigned long int product;
   sscanf(argv[1], "%lu", &product);
   int secondFactor = 0;
-  int iterations = 0;
   int bcastStatus;
   int equals;
 
@@ -40,7 +39,11 @@ int main(int argc, char** argv)
 
   /** Get Ready to receive a factor if another process finds one */
   MPI_Irecv(&secondFactor, 1, MPI_UNSIGNED_LONG, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &finalValue);
-
+  
+  /** Prepare initial offset for each process **/
+  for (i=0 ; i < my_rank ; i++) {
+    mpz_nextprime(currentPrime, currentPrime);
+  }
   /** Start Timing **/
   double start = MPI_Wtime(), diff;
   while (!secondFactor) {
@@ -51,17 +54,9 @@ int main(int argc, char** argv)
       MPI_Wait(&finalValue, &status);
       break;
     }
-    if (!iterations) {
-      /** Set Initial offset from first prime number **/
-      iterations++;
-      for (i=0 ; i < my_rank ; i++) {
-          mpz_nextprime(currentPrime, currentPrime);
-      }
-    } else {
       /** Skip P primes before checking again **/
-      for (i=0 ; i < p ; i++) {
-          mpz_nextprime(currentPrime, currentPrime);
-      }
+    for (i=0 ; i < p ; i++) {
+      mpz_nextprime(currentPrime, currentPrime);
     }
     
     /** Brute force check if the current working prime is a factor of the input number **/
